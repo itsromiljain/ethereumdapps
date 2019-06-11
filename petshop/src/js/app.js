@@ -24,18 +24,38 @@ App = {
   },
 
   initWeb3: async function() {
-    /*
-     * Replace me...
-     */
-
+    // Modern dapp browsers...
+    if(window.ethereum){
+      App.web3Provider = window.ethereum;
+      try{
+        // Request account access
+        await window.ethereum.enable();
+      }catch (error){
+        console.error("User denied account access");
+      }
+    }// Legacy dapp browsers...
+    else if(window.web3) {
+      App.web3Provider = window.web3.currentProvider;
+    }// If no injected web3 instance is detected, fall back to Ganache
+    else {
+      App.web3Provider = new Web3.providers.HttpProvider('http://127.0.0.1:7545');
+    }
     return App.initContract();
   },
 
   initContract: function() {
-    /*
-     * Replace me...
-     */
+    $.getJSON('PetShop.json', function(data){
+      // Get the necessary contract artifact file and instantiate it with truffle-contract
+      var PetShopArtifact = data;
+      App.contracts.PetShop = TruffleContract(PetShopArtifact);
 
+      // Set the provider for our contract
+      App.contracts.PetShop.setProvider(App.web3Provider);
+
+      // Use our contract to retrieve and mark the adopted pets
+      App.markAdopted();
+
+    });
     return App.bindEvents();
   },
 
@@ -44,19 +64,44 @@ App = {
   },
 
   markAdopted: function(adopters, account) {
-    /*
-     * Replace me...
-     */
+    var petshopInstance;
+
+    App.contracts.PetShop.deployed().then(function(instance){
+      petshopInstance = instance;
+      return petshopInstance.getAdopters.call();
+    }).then(function(adopters){
+      for (i = 0; i < adopters.length; i++) {
+        if (adopters[i] !== '0x0000000000000000000000000000000000000000') {
+          $('.panel-pet').eq(i).find('button').text('Success').attr('disabled', true);
+        }
+      }
+    }).catch(function(err) {
+      console.log(err.message);
+    });
   },
 
   handleAdopt: function(event) {
     event.preventDefault();
 
     var petId = parseInt($(event.target).data('id'));
+    var petshopInstance;
 
-    /*
-     * Replace me...
-     */
+    web3.eth.getAccounts(function(error, accounts){
+      if(error) {
+        console.log(error);
+      }
+      var account = accounts[0];
+      App.contracts.PetShop.deployed().then(function(instance){
+        petshopInstance = instance;
+        // Execute adopt as a transaction by sending account
+        petshopInstance.adopt(petId, {from:account});
+      }).then(function(result) {
+        return App.markAdopted();
+      }).catch(function(err) {
+      console.log(err.message);
+      });
+    });
+    
   }
 
 };
