@@ -1,4 +1,4 @@
-pragma solidity >=0.4.21 <0.6.0;
+pragma solidity >=0.4.0 <0.7.0;
 
 contract NotarizedDocument {
     
@@ -10,7 +10,7 @@ contract NotarizedDocument {
     }
     
     function signDoc(string memory document) private pure returns (bytes32) {
-        return sha256(abi.encodePacked(document));
+        return keccak256(bytes(document));
     }
     
     function storeDocumentProof(bytes32 signedDocument) private {
